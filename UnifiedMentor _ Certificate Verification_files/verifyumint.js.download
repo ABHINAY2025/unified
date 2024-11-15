@@ -1,0 +1,82 @@
+// Function to get query parameter from URL
+function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+}
+
+// Function to format the date from "dd-mm-yyyy" to a more readable format
+function formatDate(dateString) {
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+        const day = parseInt(parts[0]);
+        const month = parseInt(parts[1]);
+        const year = parseInt(parts[2]);
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(year, month - 1, day).toLocaleDateString(undefined, options);
+        }
+    }
+    return "Invalid Date";
+}
+
+function simplifyDomain(domain) {
+    if (domain.includes('Web Development Intern')) {
+        return 'Web Development';
+    } else if (domain.includes('Data Science Intern')) {
+        return 'Data Science';
+    } else if (domain.includes('Digital Marketing Intern')) {
+        return 'Digital Marketing';
+    }
+    return domain; 
+}
+
+function parseDate(dateString) {
+    const [day, month, year] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
+// Function to calculate the duration in weeks
+function calculateDurationInWeeks(startdate, enddate) {
+    const startDateObj = parseDate(startdate);
+    const endDateObj = parseDate(enddate);
+    const millisecondsInAWeek = 7 * 24 * 60 * 60 * 1000;
+    const durationInWeeks = Math.floor((endDateObj - startDateObj) / millisecondsInAWeek);
+    // Round to the nearest even number of weeks
+    return (Math.ceil(durationInWeeks / 2) * 2 - 2);
+}
+
+const internshipId = getQueryParam("umid");
+
+if (internshipId) {
+    fetch(`https://certificate-backend-peach.vercel.app/api/trainingCert/${internshipId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("API request failed");
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                document.querySelector(".certificate").innerHTML = `<p>Link is broken</p>`;
+            } else {
+                const simplifiedDomain = simplifyDomain(data.domain);
+
+                const durationInWeeks = calculateDurationInWeeks(data.startdate, data.enddate);
+                
+                document.querySelector("h2").textContent = data.name;
+                document.querySelectorAll("p")[0].textContent = `Domain: ${simplifiedDomain}`;
+                document.querySelectorAll("p")[1].textContent = `Start Date: ${formatDate(data.startdate)}`;
+                document.querySelectorAll("p")[2].textContent = `End Date: ${formatDate(data.enddate)}`;
+                document.querySelectorAll("p")[3].textContent = `Duration in Weeks: ${durationInWeeks} weeks`;
+                document.getElementById('veri-badge').innerHTML = `<img src="/img/facebook-verified.png" alt="Verified Icon">
+                <span>Verified Candidate</span>`;
+                document.getElementById('message').innerHTML = `<p>It is verified! ${data.name} have successfully completed Internship in ${simplifiedDomain} domain at UnifiedMentor.</p>`;
+                document.querySelector("h1").textContent = "Certificate Verification";
+                document.querySelector("span").textContent = "Verify the Authenticity of a Internship Certificate";
+            }
+        })
+        .catch(error => {
+            console.error("Error fetching data:", error);
+            document.querySelector(".certificate").innerHTML = "<p>Link is broken</p>";
+        });
+}
